@@ -1,0 +1,20 @@
+#canvas {
+  position: relative; 
+  display: inline-block;
+  -webkit-transform: scaleX(-1);
+  transform: scaleX(-1);
+}
+
+.clear {
+  margin: 0;
+}
+
+#canvasOverlay {
+  position: absolute; 
+  top: 0px; 
+  z-index: 100001; 
+  display: block;
+  padding-top: 8px;
+  -webkit-transform: scaleX(-1);
+  transform: scaleX(-1);
+}
