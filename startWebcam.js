@@ -6,62 +6,76 @@ var channels = {
   blue: []
 };
 var buffer = 512;
+var DEBUG = true;
+var LOCAL = false;
 
+// query for webcam access and create video stream
 function initVideoStream(document, callback) {
+  if (DEBUG) console.log('DEBUG mode activated');
+  if (LOCAL) console.log('LOCAL mode activated -- using local video file');
+
   var video = document.createElement("video");
   video.setAttribute("width", width);
   video.setAttribute("height", height);
-
-  window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
-
-  if (navigator.mediaDevices.getUserMedia){
-    navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: false
-    }).then(function(stream){
-      video.src = window.URL.createObjectURL(stream); 
-      return callback(video);
-    }, errorCallback);
-  };
+  
+  if (LOCAL) {
+    video.src = './reference/pulse-test-small-ns.webm';
+    video.loop = 'true';
+    return callback(video);
+  } else {
+    window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
+    if (navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+      }).then(function(stream) {
+        video.src = window.URL.createObjectURL(stream); 
+        return callback(video);
+      }, errorCallback);
+    };
+  }
 };
 
-function initCanvas(document, video){
+// create canvas for drawing video stream
+function initCanvas(document, video) {
   var canvas = document.getElementById("canvas");
   canvas.setAttribute("width", width);
   canvas.setAttribute("height", height);
   var canvasContext = canvas.getContext("2d");
   
-  var canvasOverlay = document.getElementById("canvasOverlay");
-  canvasOverlay.setAttribute("width", width);
-  canvasOverlay.setAttribute("height", height);
-  var overlayContext = canvasOverlay.getContext("2d");
+  var overlay = document.getElementById("canvasOverlay");
+  overlay.setAttribute("width", width);
+  overlay.setAttribute("height", height);
+  var overlayContext = overlay.getContext("2d");
   overlayContext.clearRect(0, 0, width, height);
 
   return {
     canvas: canvas,
     canvasContext: canvasContext,
-    canvasOverlay: canvasOverlay,
+    overlay: overlay,
     overlayContext: overlayContext
   };
 };
 
-function startCapture(video, canvas, headtracker){
+function startCapture(video, canvas, headtracker) {
   video.play();
   headtracker.start(video);
 
   // ** set the framerate and draw the video the canvas at the desired fps ** 
-  renderTimer = setInterval(function(){
-      if (!video.paused) {
-        // draw headtracker face
-        canvas.overlayContext.clearRect(0,0,width,height);
-        canvas.canvasContext.drawImage(video, 0, 0, width, height);
-        headtracker.draw(canvas.canvasOverlay);
-
+  renderTimer = setInterval(function() {
+    if (!video.paused) {
+      // draw headtracker face
+      canvas.overlayContext.clearRect(0,0,width,height);
+      canvas.canvasContext.drawImage(video, 0, 0, width, height);
+      
+      if (DEBUG) {
+        headtracker.draw(canvas.overlay);
         // draw rect
         var face = headtracker.getCurrentPosition();
         if (face) drawRect(face, canvas);
       }
-    }, Math.round(1000 / 1));
+    }
+  }, Math.round(1000 / 15));
 
   return;
 };
@@ -86,61 +100,6 @@ function configPause (video, headtracker) {
   return;
 }
 
-function drawRect (coordinates, canvas) {
-  // canvas.overlayContext.clearRect(0,0,width,height);
-
-  // these refer to the array coords of the eyebrows
-  // as determined by the headtracker
-  var right = 17;
-  var left = 21;
-
-  if (coordinates) {
-    var w = coordinates[right][0] - coordinates[left][0];
-    var center = [
-      ((coordinates[right][0] + coordinates[left][0])/2) - 10,
-      ((coordinates[right][1] + coordinates[left][1])/2) - 10
-    ];
-
-    canvas.overlayContext.strokeStyle = "#33CCFF";
-    // this padding is a problem....
-    canvas.overlayContext.strokeRect(center[0], center[1], 20, 20);
-
-    var forehead = canvas.canvasContext.getImageData(center[0], center[1], 20, 20);
-    var length = forehead.data.length;
-
-    var sums = {
-      green: 0,
-      red: 0,
-      blue: 0
-    };
-
-    for (i = 0; i < length; i+=4) {
-      sums.red += forehead.data[i];
-      sums.green += forehead.data[i + 1];
-      sums.blue += forehead.data[i + 2];
-    }
-
-    // push the average of each channel to an array
-    channels.red.push(sums.red/length/4);
-    channels.green.push(sums.green/length/4);
-    channels.blue.push(sums.blue/length/4);
-
-    if (channels.green.length > buffer / 8) {
-      console.log('ready to send');
-    }
-    // if the arrays of averages are longer than the buffer
-    // drop the last value and move the window
-    if (channels.green.length > buffer) {
-      console.log('buffer full');
-      channels.red.shift();
-      channels.green.shift();
-      channels.blue.shift();
-    }
-    console.log(channels.red.length)
-  }
-
-}
-
 function errorCallback() {
   console.log('something went wrong');
 }
@@ -157,4 +116,6 @@ function main(document) {
   });
 }
 
-main(document);
+window.onload = function() {
+  main(document);
+}
