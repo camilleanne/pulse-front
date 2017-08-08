@@ -1,7 +1,6 @@
 function drawRect (coordinates, canvas) {
   // canvas.overlayContext.clearRect(0,0,width,height);
 
-
   if (coordinates) {
     // these refer to the array coords of the relevant facial points
     // as determined by the headtracker
@@ -10,7 +9,6 @@ function drawRect (coordinates, canvas) {
     var foreheadBottom = [19, 20, 21, 22, 18, 17, 16, 15];
     var foreheadTop = [16, 17, 21, 20];
     var chinDistance = coordinates[7][1] - coordinates[53][1];
-
 
     if (DEBUG) {
       canvas.overlayContext.strokeStyle = "#00fbff";
@@ -36,12 +34,10 @@ function drawRect (coordinates, canvas) {
 
       // FOREHEAD
       canvas.overlayContext.beginPath();
-
       for (var i = 0; i < foreheadBottom.length; i ++) {
         var coords = coordinates[foreheadBottom[i]];
         canvas.overlayContext.lineTo(coords[0], coords[1]);
       }
-
       for (var i = 0; i < foreheadTop.length; i ++) {
         var coords = coordinates[foreheadTop[i]];
         canvas.overlayContext.lineTo(coords[0], coords[1] - chinDistance);
